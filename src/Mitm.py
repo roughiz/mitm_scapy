@@ -49,14 +49,15 @@ class MITM():
             return False
 
     def network_scanner(self,cidr):
-        res = scapy.plist.SndRcvList()
-        unans = scapy.plist.PacketList()
+        res = ""
+        unans = ""
         try:
             print "[*] Appuyez sur Ctrl+c pour arreter le scan\n "
-            res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=cidr),iface=self.ATTACK_INF["IFACE"],verbose=None)
+            res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=cidr),iface=self.ATTACK_INF["IFACE"],verbose=None,timeout=10)
             res.summary(lambda (s, r): r.sprintf("%Ether.src% %ARP.psrc%"))
         except KeyboardInterrupt:
-            res.summary(lambda (s, r): r.sprintf("%Ether.src% %ARP.psrc%"))
+            if res:
+                res.summary(lambda (s, r): r.sprintf("%Ether.src% %ARP.psrc%"))
 
  # Intercept user choices
     def get_targets_informations(self):
