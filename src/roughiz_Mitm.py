@@ -1,5 +1,5 @@
 from Mitm import MITM
-
+import threading
 
 def main():
 
@@ -7,6 +7,9 @@ def main():
     mitm = MITM()
     mitm.log_color()
     mitm.get_targets_informations()
+    mitm.start_attack()
+
+
 
 
 
