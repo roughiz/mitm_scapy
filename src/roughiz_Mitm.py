@@ -5,10 +5,10 @@ def main():
 
     #arp_poison(get_targets_informations())
     mitm = MITM()
-    #mitm.log_color()
-    #mitm.get_targets_informations()
-    #mitm.start_attack()
-    mitm.run_authentifacion_scanner()
+    mitm.log_color()
+    mitm.get_targets_informations()
+    mitm.start_attack()
+
 
 
 
